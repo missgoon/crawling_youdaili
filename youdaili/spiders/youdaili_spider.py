@@ -24,50 +24,58 @@ class AnjukeSpider(CrawlSpider):
     ul=div.xpath("./ul[@class='newslist_line']")[0]
     for li in ul.xpath("./li"):
       url=li.xpath("./a/@href")[0].extract()	
-      yield scrapy.Request(url,self.parse_ip)
+      yield scrapy.Request(url,self.parse_ip_page)
     url,page_num=response.url.split("list_")
     page_num=int(page_num.split(".html")[0])+1
     url=url+"list_"+str(page_num)+".html"
     if requests.get(url).status_code==200: yield scrapy.Request(url,self.parse)
 
+  def parse_ip_page(self,response):
+    self.logger.info("######parse_ip_page:%s",response.url)
+    sel=Selector(response=response)
+    page_cnt=len(sel.xpath("//ul[@class='pagelist']/li"))-2
+    yield scrapy.Request(response.url,self.parse_ip)
+    url=response.url.split(".html")[0]
+    for i in range(2,page_cnt):
+      yield scrapy.Request(url+"_"+str(2)+".html",self.parse_ip)
+
   def parse_ip(self,response):
     self.logger.info("######parse_ip:%s",response.url)
-    sel=Selector(response=response)
-    if len(sel.xpath("//span[@style='font-size:14px;']"))>=1:
-	    for item in sel.xpath("//span[@style='font-size:14px;']/text()"):
-	      # handle_item(item)
-	      print(item)
-	  elif len(sel.xpath("//div[@class='cont_font']/p/text()"))>0:
-	    for item in sel.xpath("//div[@class='cont_font']/p/text()"):
-	      # handle_item(item)
-	      print(item)
-	  
+  #   sel=Selector(response=response)
+  #   if len(sel.xpath("//span[@style='font-size:14px;']"))>=1:
+  #     for item in sel.xpath("//span[@style='font-size:14px;']/text()"):
+  #      # handle_item(item)
+  #      print(item)
+  #  elif len(sel.xpath("//div[@class='cont_font']/p/text()"))>0:
+  #    for item in sel.xpath("//div[@class='cont_font']/p/text()"):
+  #      # handle_item(item)
+  #      print(item)
 
 
 
 
 
-def run(url):
-  html=lxml.html.fromstring(requests.get(url).content)
-  if len(html.xpath("//span[@style='font-size:14px;']"))>=1:
-    for item in html.xpath("//span[@style='font-size:14px;']/text()"):
-      handle_item(item)
-  elif len(html.xpath("//div[@class='cont_font']/p/text()"))>0:
-    for item in html.xpath("//div[@class='cont_font']/p/text()"):
-      handle_item(item)
-  r.set("process_cnt",int(r.get("process_cnt"))-1)
+# def run(url):
+#   html=lxml.html.fromstring(requests.get(url).content)
+#   if len(html.xpath("//span[@style='font-size:14px;']"))>=1:
+#     for item in html.xpath("//span[@style='font-size:14px;']/text()"):
+#       handle_item(item)
+#   elif len(html.xpath("//div[@class='cont_font']/p/text()"))>0:
+#     for item in html.xpath("//div[@class='cont_font']/p/text()"):
+#       handle_item(item)
+#   r.set("process_cnt",int(r.get("process_cnt"))-1)
 
-def handle_item(item):
-  try:
-    if item.strip().count("@")!=0: item=item.strip().split("@")[0]
-    elif item.strip().count("#")!=0: item=item.strip().split("#")[0]
-    if not len(item)>0: raise
-    proxies = {'http':"http://"+item}
-    response=requests.get(test_url,proxies=proxies,timeout=1)
-    print(proxies,response)
-    if response.status_code!=200: raise
-    r.lpush("ip_proxies",item)
-    print("%s\t%d"%(item,r.llen("ip_proxies")))
-  except Exception,e:
-    print(e)
+# def handle_item(item):
+#   try:
+#     if item.strip().count("@")!=0: item=item.strip().split("@")[0]
+#     elif item.strip().count("#")!=0: item=item.strip().split("#")[0]
+#     if not len(item)>0: raise
+#     proxies = {'http':"http://"+item}
+#     response=requests.get(test_url,proxies=proxies,timeout=1)
+#     print(proxies,response)
+#     if response.status_code!=200: raise
+#     r.lpush("ip_proxies",item)
+#     print("%s\t%d"%(item,r.llen("ip_proxies")))
+#   except Exception,e:
+#     print(e)
 
