@@ -5,6 +5,7 @@ from scrapy.linkextractors import LinkExtractor
 from scrapy.selector import Selector
 from youdaili.items import *
 import requests
+import json
 
 class AnjukeSpider(CrawlSpider):
   name="youdaili"
@@ -39,17 +40,35 @@ class AnjukeSpider(CrawlSpider):
     for i in range(2,page_cnt):
       yield scrapy.Request(url+"_"+str(2)+".html",self.parse_ip)
 
+  def handle_item(self,item,desc):
+    self.logger.info("######handle_item")
+    if str(item.__class__)=="<class 'scrapy.selector.unified.Selector'>": item=item.extract()
+    if item.strip().count("@")>0: item,text=item.strip().split("@")
+    elif item.strip().count("#")>0: item,text=item.strip().split("#")
+    ip,port=item.split(":")
+    item=IpItem({"ip":ip,"port":port,"text":text,"data_time":desc}) 
+    return item
+
   def parse_ip(self,response):
     self.logger.info("######parse_ip:%s",response.url)
-  #   sel=Selector(response=response)
-  #   if len(sel.xpath("//span[@style='font-size:14px;']"))>=1:
-  #     for item in sel.xpath("//span[@style='font-size:14px;']/text()"):
-  #      # handle_item(item)
-  #      print(item)
-  #  elif len(sel.xpath("//div[@class='cont_font']/p/text()"))>0:
-  #    for item in sel.xpath("//div[@class='cont_font']/p/text()"):
-  #      # handle_item(item)
-  #      print(item)
+    sel=Selector(response=response)
+    try:
+      desc=sel.xpath("//div[@class='cont_time']/text()")[0].extract()
+    except:
+      desc=""
+    if len(sel.xpath("//span[@style='font-size:14px;']"))>0:
+      assert len(sel.xpath("//span[@style='font-size:14px;']/text()")) >0
+      for item in sel.xpath("//span[@style='font-size:14px;']/text()"):
+        item=self.handle_item(item,desc)
+        yield item
+    elif len(sel.xpath("//div[@class='cont_font']/p/text()"))>0:
+      assert len(sel.xpath("//div[@class='cont_font']/p/text()")) >0
+      for item in sel.xpath("//div[@class='cont_font']/p/text()"):
+        item=self.handle_item(item,desc)
+        yield item
+
+
+
 
 
 
@@ -65,13 +84,7 @@ class AnjukeSpider(CrawlSpider):
 #       handle_item(item)
 #   r.set("process_cnt",int(r.get("process_cnt"))-1)
 
-# def handle_item(item):
-#   try:
-#     if item.strip().count("@")!=0: item=item.strip().split("@")[0]
-#     elif item.strip().count("#")!=0: item=item.strip().split("#")[0]
-#     if not len(item)>0: raise
-#     proxies = {'http':"http://"+item}
-#     response=requests.get(test_url,proxies=proxies,timeout=1)
+    # response=requests.get(test_url,proxies=proxies,timeout=1)
 #     print(proxies,response)
 #     if response.status_code!=200: raise
 #     r.lpush("ip_proxies",item)
